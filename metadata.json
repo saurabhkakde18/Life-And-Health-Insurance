@@ -1,0 +1,6 @@
+{
+  "name": "LifeExpress Insurance Services",
+  "description": "Life & Health Insurance advisory and financial protection services by Nitin Agrawal in Jalna, Maharashtra.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
