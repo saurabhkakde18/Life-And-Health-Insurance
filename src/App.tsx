@@ -21,10 +21,12 @@ import { DisclaimerBanner } from './components/DisclaimerBanner';
 import { Footer } from './components/Footer';
 import { FloatingActions } from './components/FloatingActions';
 import { ConsultationModal } from './components/ConsultationModal';
+import { AdminPortal } from './components/admin/AdminPortal';
 
 export default function App() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTopic, setModalTopic] = useState<string>('General Enquiry');
+  const [adminPortalOpen, setAdminPortalOpen] = useState(false);
   const [selectedRequirement, setSelectedRequirement] = useState<string>('Life Insurance');
   const [formNotes, setFormNotes] = useState<string>('');
 
@@ -128,8 +130,8 @@ export default function App() {
         <DisclaimerBanner />
       </main>
 
-      {/* Footer */}
-      <Footer />
+      {/* Footer (contains the exclusive Admin Portal login / setup link) */}
+      <Footer onOpenAdminPortal={() => setAdminPortalOpen(true)} />
 
       {/* Floating WhatsApp and Mobile Quick Actions */}
       <FloatingActions />
@@ -139,6 +141,12 @@ export default function App() {
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         defaultTopic={modalTopic}
+      />
+
+      {/* Admin Portal (Accessible exclusively from Footer) */}
+      <AdminPortal
+        isOpen={adminPortalOpen}
+        onClose={() => setAdminPortalOpen(false)}
       />
     </div>
   );

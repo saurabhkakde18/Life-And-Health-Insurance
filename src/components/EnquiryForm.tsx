@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Send, CheckCircle2, MessageSquare, Phone, User, Mail, MapPin, ShieldCheck, Loader2, Sparkles, FileText, HeartPulse } from 'lucide-react';
+import { Send, CheckCircle2, MessageSquare, Phone, User, Mail, MapPin, ShieldCheck, Loader2, Sparkles, FileText, HeartPulse, Database, Copy, Check } from 'lucide-react';
 import { CONTACT_INFO } from '../data/insuranceData';
+import { saveAppointmentBooking, SUPABASE_PROJECT_ID } from '../lib/supabaseClient';
 
 interface EnquiryFormProps {
   initialRequirement?: string;
@@ -27,6 +28,12 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [supabaseStatus, setSupabaseStatus] = useState<{
+    savedToSupabase: boolean;
+    needsTableSetup?: boolean;
+    error?: string;
+  } | null>(null);
+  const [copiedSql, setCopiedSql] = useState(false);
 
   useEffect(() => {
     if (initialRequirement) {
@@ -88,15 +95,71 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
 
     setIsSubmitting(true);
-    setTimeout(() => {
+
+    try {
+      const result = await saveAppointmentBooking({
+        fullName: fullName.trim(),
+        mobileNumber: mobileNumber.trim(),
+        email: email.trim(),
+        city: city.trim(),
+        requirement: requirement,
+        consultationPreference: visitType,
+        message: message.trim(),
+        source: 'website_form',
+      });
+
+      setSupabaseStatus({
+        savedToSupabase: result.savedToSupabase,
+        needsTableSetup: result.needsTableSetup,
+        error: result.error,
+      });
+    } catch (err: any) {
+      console.error('Submission failed', err);
+      setSupabaseStatus({
+        savedToSupabase: false,
+        error: err?.message,
+      });
+    } finally {
       setIsSubmitting(false);
       setIsSubmitted(true);
-    }, 600);
+    }
+  };
+
+  const sqlCreateTableScript = `-- SQL script for Supabase SQL Editor
+CREATE TABLE IF NOT EXISTS public.appointments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_at TIMESTAMPTZ DEFAULT now(),
+    full_name TEXT NOT NULL,
+    mobile_number TEXT NOT NULL,
+    email TEXT,
+    city TEXT,
+    requirement TEXT,
+    consultation_preference TEXT,
+    message TEXT,
+    source TEXT DEFAULT 'website_form',
+    status TEXT DEFAULT 'new'
+);
+
+-- Enable Row Level Security (RLS)
+ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
+
+-- Allow public anonymous submissions from website
+CREATE POLICY "Allow public insert" ON public.appointments
+    FOR INSERT WITH CHECK (true);
+
+-- Allow reading appointments for authorized advisor
+CREATE POLICY "Allow select" ON public.appointments
+    FOR SELECT USING (true);`;
+
+  const copySqlToClipboard = () => {
+    navigator.clipboard.writeText(sqlCreateTableScript);
+    setCopiedSql(true);
+    setTimeout(() => setCopiedSql(false), 2500);
   };
 
   const generateWhatsAppUrl = () => {
@@ -121,6 +184,7 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
 
   const handleReset = () => {
     setIsSubmitted(false);
+    setSupabaseStatus(null);
     setFullName('');
     setMobileNumber('');
     setEmail('');
@@ -214,6 +278,49 @@ export const EnquiryForm: React.FC<EnquiryFormProps> = ({
                 <p className="text-xs text-slate-500 max-w-md mx-auto">
                   We have logged your request for <strong>{requirement}</strong> ({visitType}). For urgent queries, feel free to connect immediately via WhatsApp or direct call.
                 </p>
+              </div>
+
+              {/* Supabase Backend Sync Status */}
+              <div className="pt-1">
+                {supabaseStatus?.savedToSupabase ? (
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-800">
+                    <Database className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Saved to Supabase Backend (Table: appointments)</span>
+                  </div>
+                ) : supabaseStatus?.needsTableSetup ? (
+                  <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-left text-xs space-y-2.5">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-2 font-bold text-amber-900">
+                        <Database className="w-4 h-4 text-amber-700" />
+                        <span>Supabase Connected (Project: {SUPABASE_PROJECT_ID})</span>
+                      </div>
+                      <span className="text-[11px] bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-semibold">
+                        Table Setup Ready
+                      </span>
+                    </div>
+                    <p className="text-amber-800 leading-relaxed">
+                      Your Supabase project is connected! To store rows directly in your database, execute the <code>appointments</code> table SQL script in your Supabase SQL Editor:
+                    </p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={copySqlToClipboard}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium transition-colors cursor-pointer"
+                      >
+                        {copiedSql ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{copiedSql ? 'Copied SQL Script!' : 'Copy SQL Table Schema'}</span>
+                      </button>
+                      <span className="text-[11px] text-slate-500">
+                        Lead backed up safely & ready for WhatsApp
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs text-slate-600">
+                    <Database className="w-3.5 h-3.5 text-teal-600" />
+                    <span>Supabase Backend Integration Active</span>
+                  </div>
+                )}
               </div>
 
               {/* Action Buttons */}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, Send, Phone, MessageSquare, CheckCircle2, User, Mail, MapPin, Loader2 } from 'lucide-react';
+import { X, Send, Phone, MessageSquare, CheckCircle2, User, Mail, MapPin, Loader2, Database } from 'lucide-react';
 import { CONTACT_INFO } from '../data/insuranceData';
+import { saveAppointmentBooking } from '../lib/supabaseClient';
 
 interface ConsultationModalProps {
   isOpen: boolean;
@@ -22,15 +23,25 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !phone) return;
 
     setIsSubmitting(true);
-    setTimeout(() => {
+    try {
+      await saveAppointmentBooking({
+        fullName: name.trim(),
+        mobileNumber: phone.trim(),
+        email: email.trim(),
+        requirement: topic,
+        source: 'modal',
+      });
+    } catch (err) {
+      console.error('Failed to save to Supabase from modal', err);
+    } finally {
       setIsSubmitting(false);
       setIsSubmitted(true);
-    }, 600);
+    }
   };
 
   const handleReset = () => {

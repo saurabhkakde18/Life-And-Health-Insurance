@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
-import { Shield, Phone, Mail, MapPin, MessageSquare, Facebook, Instagram, Linkedin, HeartHandshake, ArrowUp } from 'lucide-react';
+import { Shield, Phone, Mail, MapPin, MessageSquare, Facebook, Instagram, Linkedin, HeartHandshake, ArrowUp, Lock } from 'lucide-react';
 import { CONTACT_INFO } from '../data/insuranceData';
 import { LegalModal } from './LegalModal';
 import { LicLogo } from './logos/LicLogo';
 import { CareHealthLogo } from './logos/CareHealthLogo';
 
-export const Footer: React.FC = () => {
+interface FooterProps {
+  onOpenAdminPortal?: () => void;
+}
+
+export const Footer: React.FC<FooterProps> = ({ onOpenAdminPortal }) => {
   const [legalModal, setLegalModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -150,6 +154,18 @@ export const Footer: React.FC = () => {
               <li>
                 <a href="#contact" className="text-slate-400 hover:text-white transition-colors">Contact & Office Location</a>
               </li>
+              {onOpenAdminPortal && (
+                <li className="pt-2 border-t border-slate-900">
+                  <button
+                    type="button"
+                    onClick={onOpenAdminPortal}
+                    className="text-slate-400 hover:text-teal-400 flex items-center gap-1.5 transition-colors cursor-pointer font-medium"
+                  >
+                    <Lock className="w-3.5 h-3.5 text-teal-500" />
+                    <span>Advisor Portal (Admin Login)</span>
+                  </button>
+                </li>
+              )}
             </ul>
           </div>
 
@@ -220,6 +236,16 @@ export const Footer: React.FC = () => {
             >
               Disclaimer
             </button>
+            {onOpenAdminPortal && (
+              <button
+                type="button"
+                onClick={onOpenAdminPortal}
+                className="inline-flex items-center gap-1 text-slate-500 hover:text-teal-400 transition-colors cursor-pointer"
+              >
+                <Lock className="w-3 h-3 text-teal-600" />
+                <span>Admin Login</span>
+              </button>
+            )}
           </div>
         </div>
 
